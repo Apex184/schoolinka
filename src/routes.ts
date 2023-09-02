@@ -1,4 +1,5 @@
-import { UserController } from "./controller/UserController"
+import { UserController } from "./controller/UserController";
+import { BlogController } from "./controller/PostController";
 
 export const Routes = [{
     method: "get",
@@ -36,4 +37,34 @@ export const Routes = [{
     controller: UserController,
     action: "verifyUser"
 },
+{
+    method: "get",
+    route: "/api/post",
+    controller: BlogController,
+    action: "findAllPosts"
+},
+{
+    method: "get",
+    route: "/api/post/:id",
+    controller: BlogController,
+    action: "getOnePost"
+},
+{
+    method: "post",
+    route: "/api/post",
+    controller: BlogController,
+    action: "createPost"
+},
+{
+    method: "delete",
+    route: "/api/post/:id",
+    controller: BlogController,
+    action: "deletePost"
+},
+{
+    method: "patch",
+    route: "/api/post/:id",
+    controller: BlogController,
+    action: "updatePost"
+}
 ]

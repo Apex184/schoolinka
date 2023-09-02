@@ -46,7 +46,7 @@ export class UserController {
 
         await this.userRepository.remove(userToRemove)
 
-        return "User has been removed successfully"
+        return "user has been removed successfully"
     }
 
     async updateUser(request: Request, response: Response, next: NextFunction) {
@@ -61,7 +61,7 @@ export class UserController {
 
         await this.userRepository.update(userToUpdate, request.body)
 
-        return "User data updated successfully"
+        return "User daUpdated successfully"
     }
 
 }

@@ -2,19 +2,18 @@ import * as bodyParser from "body-parser"
 import express, { Request, Response, NextFunction } from "express"
 import { AppDataSource } from "./data-source"
 import { Routes } from "./routes"
-import { User } from "./entity/User"
 import cookieParser from 'cookie-parser';
 import logger from 'morgan';
 import cors from 'cors';
 import createError from 'http-errors';
+import dotenv from 'dotenv';
+dotenv.config();
 
 function handleErrors(err: createError.HttpError, req: Request, res: Response, next: NextFunction) {
     res.status(err.statusCode || 500).send({ message: err.message });
 };
 
 AppDataSource.initialize().then(async () => {
-
-    // create express app
     const app = express()
     app.use(cookieParser());
     app.use(logger('dev'));
@@ -23,7 +22,6 @@ AppDataSource.initialize().then(async () => {
     app.use(bodyParser.urlencoded({ extended: true }))
     const port = process.env.PORT || 9000;
 
-    // register express routes from defined application routes
     Routes.forEach(route => {
         (app as any)[route.method](route.route, async (req: Request, res: Response, next: Function) => {
             try {
@@ -37,6 +35,6 @@ AppDataSource.initialize().then(async () => {
     });
     app.use(handleErrors);
     app.listen(port)
-    console.log(`Server has started on port ${port}. Open http://localhost:${port}/users to see results`)
+    console.log(`Server has started on port ${port}.`)
 
 }).catch(error => console.log(error))
