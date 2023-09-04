@@ -10,7 +10,7 @@ interface IUser {
     isVerified: boolean
 }
 @Entity()
-export class User implements IUser {
+export class User {
 
     @PrimaryGeneratedColumn()
     id: number

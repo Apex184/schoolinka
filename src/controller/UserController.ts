@@ -8,9 +8,10 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 const fromUser = process.env.FROM as string;
-const jwtsecret = process.env.JWT_SECRET as string || "example";
+const jwtsecret = process.env.JWT_SECRET as string || "examplesecret";
 interface jwtPayload {
     id: number;
+    email: string;
 }
 
 const userRepository = AppDataSource.getRepository(User);
@@ -34,7 +35,7 @@ export const createUser = async (request: Request, response: Response, next: Nex
 
 
         await userRepository.save(user);
-        const token = generateLoginToken({ id: user.id });
+        const token = generateLoginToken({ id: user.id, email: user.email });
         return response.status(201).json({ message: "User created successfulyy", token, user })
     } catch (error) {
         console.log(error);
@@ -49,23 +50,18 @@ export const loginUser = async (request: Request, response: Response, next: Next
         const user = await userRepository.findOne({ where: { email: email, isVerified: true } });
 
         if (!user) {
-            throw Error("This user does not exist or has not been verified");
+            return response.status(404).json({ message: "This user does not exist" });
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
 
         if (!isPasswordValid) {
-            throw Error("Invalid password");
+            return response.status(401).json({ message: "Invalid password" });
         }
+        const token = generateLoginToken({ id: user.id, secret: jwtsecret });
+        // const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-        return response.json({
-            message: "User logged in successfully",
-            user,
-            token
-
-        });
+        return response.status(200).json({ message: "User logged in successfully", token, user })
     } catch (error) {
         console.log(error);
         next(error);
@@ -76,29 +72,31 @@ export const loginUser = async (request: Request, response: Response, next: Next
 export const verifyUser = async (request: Request, response: Response, next: NextFunction) => {
     try {
         const token = request.params.token;
-        const decodedToken = jwt.verify(token, process.env.JWT_SECRET) as { id: number };
-
+        const { email } = jwt.verify(token, jwtsecret) as jwtPayload;
+        if (!email) {
+            return response.status(401).json({ message: 'Invalid token' });
+        }
         const user = await userRepository.findOne({
-            where: { id: decodedToken.id }
+            where: { email },
         });
 
         if (!user) {
-            throw Error("This user does not exist");
+            return response.status(404).json({ message: 'This user does not exist' });
         }
         if (user.isVerified) {
-            throw Error("This user has already been verified");
+            return response.status(409).json({ message: 'This user has already been verified' });
         }
 
         user.isVerified = true;
 
         await userRepository.save(user);
 
-        return response.json({ message: "User verified successfully" })
+        return response.status(200).json({ message: 'User has been verified successfully' });
     } catch (error) {
-        console.log(error);
+        console.error(error);
         next(error);
     }
-}
+};
 
 
 export const findAllUsers = async (request: Request, response: Response, next: NextFunction) => {
