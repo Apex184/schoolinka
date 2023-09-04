@@ -1,7 +1,10 @@
 # Awesome Project Build with TypeORM
 
 Steps to run this project:
-
-1. Run `npm i` command
-2. Setup database settings inside `data-source.ts` file
-3. Run `npm start` command
+1. Clone this github link
+2. cd to `schoolinka` folder
+3. Create env file and specify your own port but I used port 9000
+4. Run `docker compose up` or `docker compose up -d`
+5. Run `npm i` command
+6. Run `npm run build `to transpile your code first, then
+3. Run `npm run dev` command
