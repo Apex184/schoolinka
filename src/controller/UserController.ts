@@ -9,7 +9,6 @@ dotenv.config()
 const fromUser = process.env.FROM as string;
 const jwtsecret = process.env.JWT_SECRET as string;
 interface jwtPayload {
-    email: string;
     id: number;
 }
 
@@ -91,6 +90,9 @@ export const verifyUser = async (request: Request, response: Response, next: Nex
         if (!user) {
             throw Error("This user does not exist");
         }
+        if (user.isVerified) {
+            throw Error("This user has already been verified");
+        }
 
         user.isVerified = true;
 
@@ -131,17 +133,20 @@ export const getOneUser = async (request: Request, response: Response, next: Nex
     try {
         const token = request.headers.token as string;
         const { id } = jwt.verify(token, jwtsecret) as jwtPayload;
+        if (!id) {
+            return response.json({ message: "You are not authorized to view this page" })
+        }
+        const postId = parseInt(request.params.id);
         const user = await userRepository.findOne({
-            where: { id }
+            where: { id: postId }
         })
 
         if (!user) {
-            throw Error("This user not exist");
+            return response.status(404).json({ message: "This user does not exist" });
         }
-        return response.json({
+        return response.status(200).json({
             message: "User fetched successfully", user
         });
-
     } catch (error) {
         return next(error);
     }
@@ -154,15 +159,20 @@ export const deleteUser = async (request: Request, response: Response, next: Nex
         const token = request.headers.token as string;
         const { id } = jwt.verify(token, jwtsecret) as jwtPayload;
 
-        const userToRemove = await userRepository.findOneBy({ id })
+        if (!id) {
+            return response.json({ message: "You are not authorized to view this page" })
+        }
+        const postId = parseInt(request.params.id);
+        const userToRemove = await userRepository.findOneBy({ id: postId });
 
         if (!userToRemove) {
-            throw Error("This user not exist");
+            return response.status(404).json({ message: "This user does not exist" });
         }
 
         await userRepository.remove(userToRemove)
 
-        return "user has been removed"
+        return response.status(200).json({ message: "User has been removed" });
+
 
     } catch (error) {
         console.log(error)
@@ -175,17 +185,20 @@ export const updateUser = async (request: Request, response: Response, next: Nex
     try {
         const token = request.headers.token as string;
         const { id } = jwt.verify(token, jwtsecret) as jwtPayload;
-
-        const userToUpdate = await userRepository.findOneBy({ id })
+        if (!id) {
+            return response.json({ message: "You are not authorized to view this page" })
+        }
+        const postId = parseInt(request.params.id);
+        const userToUpdate = await userRepository.findOneBy({ id: postId })
 
         if (!userToUpdate) {
-            throw Error("This user not exist");
+            return response.status(404).json({ message: "This user does not exist" });
         }
 
 
         await userRepository.update(userToUpdate, request.body)
 
-        return "user has been removed"
+        return response.status(200).json({ message: "User has been updated", });
     } catch (error) {
         console.log(error)
         return next(error);
@@ -197,11 +210,15 @@ export const changePassword = async (request: Request, response: Response, next:
     try {
         const token = request.headers.token as string;
         const { id } = jwt.verify(token, jwtsecret) as jwtPayload;
+        if (!id) {
+            return response.json({ message: "You are not authorized to view this page" })
+        }
+        const postId = parseInt(request.params.id);
 
-        const userToUpdate = await userRepository.findOneBy({ id })
+        const userToUpdate = await userRepository.findOneBy({ id: postId })
 
         if (!userToUpdate) {
-            throw Error("This user not exist");
+            return response.status(404).json({ message: "This user does not exist" });
         }
 
         const { oldPassword, newPassword } = request.body;
@@ -209,18 +226,39 @@ export const changePassword = async (request: Request, response: Response, next:
         const isPasswordValid = await bcrypt.compare(oldPassword, userToUpdate.password);
 
         if (!isPasswordValid) {
-            throw Error("Invalid password");
+            return response.status(401).json({ message: "Invalid password" });
         }
 
         const passwordHash = await bcrypt.hash(newPassword, 10);
         userToUpdate.password = passwordHash;
 
         await userRepository.save(userToUpdate);
-
-        return response.json({ message: "Password has been changed successfully" });
+        return response.status(200).json({ message: "Password has been changed successfully", });
     } catch (error) {
         console.log(error)
         return next(error);
+    }
+}
+
+export const resetPassword = async (request: Request, response: Response, next: NextFunction) => {
+    try {
+        const { email } = request.body;
+
+        const user = await userRepository.findOne({ where: { email: email } });
+
+        if (!user) {
+            return response.status(404).json({ message: "This user does not exist" });
+        }
+
+        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+        return response.json({
+            message: "Please check your email to reset your password",
+            token
+        });
+    } catch (error) {
+        console.log(error);
+        next(error);
     }
 }
 

@@ -9,7 +9,6 @@ dotenv.config()
 const fromUser = process.env.FROM as string;
 const jwtsecret = process.env.JWT_SECRET as string;
 interface jwtPayload {
-    email: string;
     id: number;
 }
 
@@ -56,8 +55,9 @@ export const getOnePost = async (request: Request, response: Response, next: Nex
         if (!id) {
             return response.json({ message: "You are not authorized to view this page" })
         }
+        const postId = parseInt(request.params.id);
         const post = await postRepository.findOne({
-            where: { id },
+            where: { id: postId },
         });
 
         if (!post) {
@@ -76,7 +76,9 @@ export const createPost = async (request: Request, response: Response, next: Nex
     const token = request.headers.token as string;
     const { id } = jwt.verify(token, jwtsecret) as jwtPayload;
     if (!id) {
-        return response.json({ message: "You are not authorized to view this page" })
+        return response.status(401).json({
+            message: "You are not authorized to view this page",
+        })
     }
     const { title, content } = request.body;
 
@@ -94,18 +96,21 @@ export const deletePost = async (request: Request, response: Response, next: Nex
         const token = request.headers.token as string;
         const { id } = jwt.verify(token, jwtsecret) as jwtPayload;
         if (!id) {
-            return response.json({ message: "You are not authorized to view this page" })
+            return response.status(401).json({
+                message: "You are not authorized to view this page",
+            })
         }
+        const postId = parseInt(request.params.id);
         const post = await postRepository.findOne({
-            where: { id },
+            where: { id: postId },
         });
 
         if (!post) {
-            throw Error("This post not exist");
+            return response.status(404).json({ message: "This post not exist" })
         }
 
         await postRepository.remove(post);
-        return "The post has been deleted successfully";
+        return response.status(200).json({ message: "Post deleted successfully" })
     } catch (error) {
         console.log(error);
         next(error);
@@ -119,13 +124,15 @@ export const updatePost = async (request: Request, response: Response, next: Nex
         if (!id) {
             return response.json({ message: "You are not authorized to view this page" })
         }
+        const postId = parseInt(request.params.id);
+
         const { title, content } = request.body;
         const post = await postRepository.findOne({
-            where: { id },
+            where: { id: postId },
         });
 
         if (!post) {
-            throw Error("This post not exist");
+            return response.status(404).json({ message: "This post not exist" })
         }
 
         post.title = title;

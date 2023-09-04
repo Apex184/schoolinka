@@ -15,7 +15,7 @@ router.get('/verify/:token', verifyUser);
 router.get('/all', findAllUsers);
 router.get('/single/:id', isAuthorized, getOneUser);
 router.delete('/delete/:id', isAuthorized, deleteUser);
-router.put('/update/:id', isAuthorized, updateUser);
+router.patch('/update/:id', isAuthorized, updateUser);
 
 
 
