@@ -6,7 +6,7 @@ import jwt from "jsonwebtoken";
 import dotenv from 'dotenv'
 dotenv.config()
 
-const fromUser = process.env.FROM as string;
+
 const jwtsecret = process.env.JWT_SECRET as string;
 interface jwtPayload {
     id: number;
