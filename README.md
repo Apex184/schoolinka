@@ -8,3 +8,6 @@ Steps to run this project:
 5. Run `npm i` command
 6. Run `npm run build `to transpile your code first, then
 3. Run `npm run dev` command
+
+Here is the link to all APIs:
+https://documenter.getpostman.com/view/21519412/2s9Y5eNevj
