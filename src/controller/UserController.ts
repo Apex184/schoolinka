@@ -3,11 +3,12 @@ import { AppDataSource } from "../data-source";
 import { User } from "../entity/User";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { generateLoginToken } from '../middleware/loginToken';
 import dotenv from 'dotenv'
 dotenv.config()
 
 const fromUser = process.env.FROM as string;
-const jwtsecret = process.env.JWT_SECRET as string;
+const jwtsecret = process.env.JWT_SECRET as string || "example";
 interface jwtPayload {
     id: number;
 }
@@ -20,7 +21,7 @@ export const createUser = async (request: Request, response: Response, next: Nex
 
         const userExists = await userRepository.findOne({ where: { email: email } });
         if (userExists) {
-            throw Error("This user already exists");
+            return response.status(409).json({ message: "This user already exists" });
         }
         const passwordHash = await bcrypt.hash(password, 10);
         const user = Object.assign(new User(), {
@@ -29,18 +30,12 @@ export const createUser = async (request: Request, response: Response, next: Nex
             age,
             email,
             password: passwordHash,
-            isVerified: false,
         });
 
 
         await userRepository.save(user);
-        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-        return response.json({
-            message: "User created successfully, please check your email to verify your account",
-            user,
-            token,
-        });
+        const token = generateLoginToken({ id: user.id });
+        return response.status(201).json({ message: "User created successfulyy", token, user })
     } catch (error) {
         console.log(error);
         next(error);

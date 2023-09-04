@@ -8,6 +8,7 @@ const secret = process.env.JWT_SECRET as string;
 
 interface jwtPayload {
     id: number;
+    email: string;
 }
 
 
