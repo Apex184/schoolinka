@@ -3,9 +3,9 @@
 Steps to run this project:
 1. Clone this github link
 2. cd to `schoolinka` folder
-3. Create env file and specify your own port but I used port 9000
+3. Create env file and specify your own `PORT` and `JWT_SECRET`
 4. Run `docker compose up` or `docker compose up -d`
-5. Run `npm i` command
+5. Run `npm i` command to install dependencies
 6. Run `npm run build `to transpile your code first, then
 3. Run `npm run dev` command
 
