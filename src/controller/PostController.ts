@@ -2,64 +2,101 @@ import { NextFunction, Request, Response } from "express";
 import { Like } from "typeorm";
 import { AppDataSource } from "../data-source";
 import { Post } from "../entity/Post";
+import jwt from "jsonwebtoken";
+import dotenv from 'dotenv'
+dotenv.config()
 
-export class BlogController {
+const fromUser = process.env.FROM as string;
+const jwtsecret = process.env.JWT_SECRET as string;
+interface jwtPayload {
+    email: string;
+    id: number;
+}
 
-    private postRepository = AppDataSource.getRepository(Post);
 
-    async findAllPosts(request: Request, response: Response, next: NextFunction) {
-        try {
-            const { page = 1, limit = 10, search } = request.query;
-            const pageParam = page as string;
-            const pageNum = parseInt(pageParam, 10) || 1;
-            const limitParam = limit as string;
-            const limitNum = parseInt(limitParam, 10) || 10;
-            const skip = (pageNum - 1) * limitNum;
-            const whereClause = search
-                ? [
-                    { title: Like(`%${search}%`) },
-                    { content: Like(`%${search}%`) },
-                ]
-                : {};
+const postRepository = AppDataSource.getRepository(Post);
 
-            const [posts, total] = await this.postRepository.findAndCount({
-                where: whereClause,
-                take: limitNum,
-                skip,
-            });
+export const findAllPosts = async (request: Request, response: Response, next: NextFunction) => {
+    try {
 
-            response.json({ posts, total });
-        } catch (error) {
-            next(error);
+        const token = request.headers.token as string;
+        const { id } = jwt.verify(token, jwtsecret) as jwtPayload;
+        if (!id) {
+            return response.json({ message: "You are not authorized to view this page" })
         }
-    }
+        const { page = 1, limit = 10, search } = request.query;
+        const pageParam = page as string;
+        const pageNum = parseInt(pageParam, 10) || 1;
+        const limitParam = limit as string;
+        const limitNum = parseInt(limitParam, 10) || 10;
+        const skip = (pageNum - 1) * limitNum;
+        const whereClause = search
+            ? [
+                { title: Like(`%${search}%`) },
+                { content: Like(`%${search}%`) },
+            ]
+            : {};
 
-    async getOnePost(request: Request, response: Response, next: NextFunction) {
-        const id = parseInt(request.params.id);
-        const post = await this.postRepository.findOne({
+        const [posts, total] = await postRepository.findAndCount({
+            where: whereClause,
+            take: limitNum,
+            skip,
+        });
+
+        response.json({ posts, total });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export const getOnePost = async (request: Request, response: Response, next: NextFunction) => {
+    try {
+        const token = request.headers.token as string;
+        const { id } = jwt.verify(token, jwtsecret) as jwtPayload;
+        if (!id) {
+            return response.json({ message: "You are not authorized to view this page" })
+        }
+        const post = await postRepository.findOne({
             where: { id },
         });
 
         if (!post) {
             throw Error("This post not exist");
         }
-        return post;
+        return response.json({ message: "Post fetched successfully", post })
+
+    } catch (error) {
+        console.log(error);
+        next(error);
     }
 
-    async createPost(request: Request, response: Response, next: NextFunction) {
-        const { title, content } = request.body;
+}
 
-        const post = Object.assign(new Post(), {
-            title,
-            content,
-        });
-
-        return this.postRepository.save(post);
+export const createPost = async (request: Request, response: Response, next: NextFunction) => {
+    const token = request.headers.token as string;
+    const { id } = jwt.verify(token, jwtsecret) as jwtPayload;
+    if (!id) {
+        return response.json({ message: "You are not authorized to view this page" })
     }
+    const { title, content } = request.body;
 
-    async deletePost(request: Request, response: Response, next: NextFunction) {
-        const id = parseInt(request.params.id);
-        const post = await this.postRepository.findOne({
+    const post = Object.assign(new Post(), {
+        title,
+        content,
+    });
+    await postRepository.save(post);
+    return response.json({ message: 'Post created successfully', post }).status(201);
+
+}
+
+export const deletePost = async (request: Request, response: Response, next: NextFunction) => {
+    try {
+        const token = request.headers.token as string;
+        const { id } = jwt.verify(token, jwtsecret) as jwtPayload;
+        if (!id) {
+            return response.json({ message: "You are not authorized to view this page" })
+        }
+        const post = await postRepository.findOne({
             where: { id },
         });
 
@@ -67,13 +104,23 @@ export class BlogController {
             throw Error("This post not exist");
         }
 
+        await postRepository.remove(post);
         return "The post has been deleted successfully";
+    } catch (error) {
+        console.log(error);
+        next(error);
     }
+}
 
-    async updatePost(request: Request, response: Response, next: NextFunction) {
-        const id = parseInt(request.params.id);
+export const updatePost = async (request: Request, response: Response, next: NextFunction) => {
+    try {
+        const token = request.headers.token as string;
+        const { id } = jwt.verify(token, jwtsecret) as jwtPayload;
+        if (!id) {
+            return response.json({ message: "You are not authorized to view this page" })
+        }
         const { title, content } = request.body;
-        const post = await this.postRepository.findOne({
+        const post = await postRepository.findOne({
             where: { id },
         });
 
@@ -84,6 +131,12 @@ export class BlogController {
         post.title = title;
         post.content = content;
 
-        return this.postRepository.save(post);
+        await postRepository.save(post);
+        return response.json({ message: 'Post updated successfully', post }).status(201);
+    } catch (error) {
+        console.log(error);
+        next(error);
     }
+
 }
+
